@@ -33,7 +33,7 @@ namespace
             keypoints.push_back(newKeyPoint);
         }
         t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
-        cout << detName <<" detection with n=" << keypoints.size() << " keypoints in " << 1000 * t / 1.0 << " ms" << endl;
+        cout << detName << " detection with n=" << keypoints.size() << " keypoints in " << 1000 * t / 1.0 << " ms" << endl;
 
         // visualize results
         if (bVis)
@@ -58,7 +58,8 @@ void matchDescriptors(std::vector<cv::KeyPoint> &kPtsSource, std::vector<cv::Key
 
     if (matcherType.compare("MAT_BF") == 0)
     {
-        int normType = descSource.type() == CV_32F ? cv::NORM_L2 : cv::NORM_HAMMING;
+
+        const int normType = matcherType.compare("DES_BINARY") == 0 ? cv::NORM_HAMMING : cv::NORM_L2 ;
         matcher = cv::BFMatcher::create(normType, crossCheck);
     }
     else if (matcherType.compare("MAT_FLANN") == 0)
@@ -82,6 +83,7 @@ void matchDescriptors(std::vector<cv::KeyPoint> &kPtsSource, std::vector<cv::Key
     {
         vector<vector<cv::DMatch>> knn_matches;
         
+        double t = (double)cv::getTickCount();
         // k nearest neighbors (k=2)
         matcher->knnMatch(descSource, descRef, knn_matches, 2);
 
@@ -91,6 +93,8 @@ void matchDescriptors(std::vector<cv::KeyPoint> &kPtsSource, std::vector<cv::Key
                 matches.push_back(knn_matches[i][0]);
             }
         }
+        t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
+        cout << "Matching with n=" << matches.size() << " matches in " << 1000 * t / 1.0 << " ms" << endl;
     }
 }
 
@@ -125,7 +129,7 @@ void descKeypoints(vector<cv::KeyPoint> &keypoints, cv::Mat &img, cv::Mat &descr
         constexpr int WTA_K = 2;
         constexpr cv::ORB::ScoreType scoreType = cv::ORB::HARRIS_SCORE;
         constexpr int patchSize = 31;
-        constexpr int fastThreshold = 20;
+        constexpr int fastThreshold = 60;
 
         extractor = cv::ORB::create(nfeatures, scaleFactor, nlevels, edgeThreshold, firstLevel, WTA_K, scoreType, patchSize, fastThreshold);
     }
@@ -174,13 +178,13 @@ void detKeypointsModern(std::vector<cv::KeyPoint> &keypoints, cv::Mat &img, std:
     cv::Ptr<cv::FeatureDetector> detector;
     if (detectorType.compare("BRISK") == 0)
     {
-        constexpr int threshold = 30;        // FAST/AGAST detection threshold score.
+        constexpr int threshold = 80;        // FAST/AGAST detection threshold score.
         constexpr int octaves = 3;           // detection octaves (use 0 to do single scale)
         constexpr float patternScale = 1.0f; // apply this scale to the pattern used for sampling the neighbourhood of a keypoint.
         
-        detector = cv::BRISK::create();
+        detector = cv::BRISK::create(threshold, octaves, patternScale);
     } else if (detectorType.compare("FAST") == 0) {
-        constexpr int threshold = 10;
+        constexpr int threshold = 40;
         constexpr bool nonmaxSuppression = true;
         constexpr cv::FastFeatureDetector::DetectorType type = cv::FastFeatureDetector::TYPE_9_16;
 
@@ -201,7 +205,7 @@ void detKeypointsModern(std::vector<cv::KeyPoint> &keypoints, cv::Mat &img, std:
         constexpr cv::AKAZE::DescriptorType descriptor_type = cv::AKAZE::DESCRIPTOR_MLDB;
         constexpr int descriptor_size = 0;
         constexpr int descriptor_channels = 3;
-        constexpr float threshold = 0.001f;
+        constexpr float threshold = 0.003f;
         constexpr int nOctaves = 4;
         constexpr int nOctaveLayers = 4;
         constexpr cv::KAZE::DiffusivityType diffusivity = cv::KAZE::DIFF_PM_G2;
@@ -240,7 +244,7 @@ void detKeypointsHarris(std::vector<cv::KeyPoint> &keypoints, cv::Mat &img, bool
     detKeypointsTraditional(keypoints, img, bVis, true);
 }
 
-// Detect keypoints in image using the traditional Shi-Thomasi detector
+// Detect keypoints in image using the traditional Shi-Tomasi detector
 void detKeypointsShiTomasi(std::vector<cv::KeyPoint> &keypoints, cv::Mat &img, bool bVis/*=false*/)
 {
     detKeypointsTraditional(keypoints, img, bVis, false);

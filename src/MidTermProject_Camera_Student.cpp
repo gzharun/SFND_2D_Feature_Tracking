@@ -39,7 +39,7 @@ int main(int argc, const char *argv[])
     // misc
     constexpr int dataBufferSize = 2;       // no. of images which are held in memory (ring buffer) at the same time
     CircularBuffer<DataFrame, dataBufferSize> dataBuffer; // list of data frames which are held in memory at the same time
-    bool bVis = false;            // visualize results
+    bool bVis = true;            // visualize results
 
     /* MAIN LOOP OVER ALL IMAGES */
 
@@ -71,8 +71,9 @@ int main(int argc, const char *argv[])
         /* DETECT IMAGE KEYPOINTS */
 
         // extract 2D keypoints from current image
-        vector<cv::KeyPoint> keypoints; // create empty feature list for current image
-        string detectorType = "HARRIS";
+        vector<cv::KeyPoint>& keypoints = dataBuffer.back().keypoints; // create empty feature list for current image
+        keypoints.reserve(2000);
+        string detectorType = "FAST";
 
         //// STUDENT ASSIGNMENT
         //// TASK MP.2 -> add the following keypoint detectors in file matching2D.cpp and enable string-based selection based on detectorType
@@ -101,7 +102,7 @@ int main(int argc, const char *argv[])
         cv::Rect vehicleRect(535, 180, 180, 150);
         if (bFocusOnVehicle)
         {
-            bool bVisFocus = true;
+            bool bVisFocus = false;
 
             int pos = 0;
             for (auto& kp : keypoints) {
@@ -121,7 +122,6 @@ int main(int argc, const char *argv[])
             }
             
             static int cnt = 1;
-            cout << "Image " << cnt++ << " preceding vehicle keypoints: " << pos << endl;
 
         }
 
@@ -142,8 +142,8 @@ int main(int argc, const char *argv[])
         }
 
         // push keypoints and descriptor for current frame to end of data buffer
-        dataBuffer.back().keypoints = keypoints;
         cout << "#2 : DETECT KEYPOINTS done" << endl;
+        //dataBuffer.back().keypoints = keypoints;
 
         /* EXTRACT KEYPOINT DESCRIPTORS */
 
@@ -151,13 +151,13 @@ int main(int argc, const char *argv[])
         //// TASK MP.4 -> add the following descriptors in file matching2D.cpp and enable string-based selection based on descriptorType
         //// -> BRIEF, ORB, FREAK, AKAZE, SIFT
 
-        cv::Mat descriptors;
-        string extractorType = "SIFT"; // BRIEF, ORB, FREAK, AKAZE, SIFT
+        cv::Mat& descriptors = dataBuffer.back().descriptors;
+        string extractorType = "BRIEF"; // BRIEF, ORB, FREAK, AKAZE, SIFT
         descKeypoints(dataBuffer.back().keypoints, dataBuffer.back().cameraImg, descriptors, extractorType);
         //// EOF STUDENT ASSIGNMENT
 
         // push descriptors for current frame to end of data buffer
-        dataBuffer.back().descriptors = descriptors;
+        //dataBuffer.back().descriptors = descriptors;
 
         cout << "#3 : EXTRACT DESCRIPTORS done" << endl;
 
@@ -166,10 +166,9 @@ int main(int argc, const char *argv[])
             /* MATCH KEYPOINT DESCRIPTORS */
 
             const auto cvType = dataBuffer.back().descriptors.type();
-            vector<cv::DMatch> matches;
+            vector<cv::DMatch>& matches = dataBuffer.back().kptMatches;
             string matcherType = "MAT_BF";        // MAT_BF, MAT_FLANN
-            // Descriptor type will be detected automatically
-            string descriptorType = "DES_BINARY"; // DES_BINARY, DES_HOG
+            string descriptorType = cvType == CV_32F ? "DES_HOG" : "DES_BINARY"; // DES_BINARY, DES_HOG
             string selectorType = "SEL_KNN";       // SEL_NN, SEL_KNN
 
             //// STUDENT ASSIGNMENT
@@ -183,7 +182,7 @@ int main(int argc, const char *argv[])
             //// EOF STUDENT ASSIGNMENT
 
             // store matches in current data frame
-            dataBuffer.back().kptMatches = matches;
+            //dataBuffer.back().kptMatches = matches;
 
             cout << "#4 : MATCH KEYPOINT DESCRIPTORS done" << endl;
 
